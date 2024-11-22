@@ -2,7 +2,7 @@ from pymongo import MongoClient
 from datetime import datetime
 
 # Connect to MongoDB
-client = MongoClient('mongodb://localhost:27017/')
+client = MongoClient('mongodb://mongodb:27017/')
 db = client['LibreChat']
 users_collection = db['users']
 messages_collection = db['messages']
