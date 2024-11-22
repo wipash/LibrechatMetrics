@@ -41,19 +41,24 @@ def count_users_per_day():
 def count_messages_per_user():
     pipeline = [
         {
+            '$match': {
+                'user': {'$exists': True, '$ne': None}  # Ensure user field exists
+            }
+        },
+        {
             '$group': {
-                '_id': '$userId',
+                '_id': '$user',  # Group by user
                 'messageCount': {'$sum': 1}
             }
         },
         {
-            '$sort': {'messageCount': -1}
+            '$sort': {'messageCount': -1}  # Sort by message count descending
         }
     ]
     results = messages_collection.aggregate(pipeline)
     print("Number of messages per user:")
     for record in results:
-        user_id = record['_id']
+        user_id = str(record['_id'])  # Convert ObjectId or ID to string
         count = record['messageCount']
         print(f"User {user_id}: {count} messages")
 
