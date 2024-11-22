@@ -119,6 +119,11 @@ def average_messages_per_user():
 
 
 if __name__ == "__main__":
+    log_file_path = '/opt/librechat/metrics/logs/logfile.log'
+    current_date = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+    with open(log_file_path, 'a') as f:
+        f.write(f'[{current_date}] Running metrics...\n')
     count_users_per_day()
     print()
     average_users_per_day()
