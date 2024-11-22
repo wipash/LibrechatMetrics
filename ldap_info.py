@@ -14,7 +14,7 @@ ldap_port = int(os.environ['LDAP_PORT'])
 ldap_base_dn = os.environ['LDAP_BASE_DN']
 ldap_search_filter = os.environ['LDAP_SEARCH_FILTER']
 ldap_ciphers = os.environ['LDAP_CIPHERS']
-faculty_attribute = os.environ.get('LDAP_FACULTY_ATTRIBUTE', 'faculty')
+faculty_attribute = os.environ.get('LDAP_FACULTY_ATTRIBUTE', 'Organisationseinheit')
 
 
 def connect_anonymous():
