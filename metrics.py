@@ -37,6 +37,34 @@ def count_users_per_day():
         print(f"{date}: {count} users")
 
 
+def average_users_per_day():
+    pipeline = [
+        {
+            '$group': {
+                '_id': {
+                    'year': {'$year': '$createdAt'},
+                    'month': {'$month': '$createdAt'},
+                    'day': {'$dayOfMonth': '$createdAt'}
+                },
+                'userCount': {'$sum': 1}
+            }
+        },
+        {
+            '$group': {
+                '_id': None,
+                'totalUsers': {'$sum': '$userCount'},
+                'daysCount': {'$sum': 1}
+            }
+        }
+    ]
+
+    result = users_collection.aggregate(pipeline)
+
+    for record in result:
+        average = record['totalUsers'] / record['daysCount']
+        print(f"Average users per day: {average:.2f}")
+
+
 # Function to count messages per user
 def count_messages_per_user():
     pipeline = [
@@ -63,7 +91,38 @@ def count_messages_per_user():
         print(f"User {user_id}: {count} messages")
 
 
+def average_messages_per_user():
+    pipeline = [
+        {
+            '$group': {
+                '_id': '$user',
+                'messageCount': {'$sum': 1}
+            }
+        },
+        {
+            '$group': {
+                '_id': None,
+                'totalMessages': {'$sum': '$messageCount'},
+                'userCount': {'$sum': 1}  # Counting the number of unique users
+            }
+        }
+    ]
+
+    result = messages_collection.aggregate(pipeline)
+
+    for record in result:
+        if record['userCount'] > 0:
+            average = record['totalMessages'] / record['userCount']
+            print(f"Average messages per user: {average:.2f}")
+        else:
+            print("No messages found.")
+
+
 if __name__ == "__main__":
     count_users_per_day()
     print()
+    average_users_per_day()
+    print()
     count_messages_per_user()
+    print()
+    average_messages_per_user()
