@@ -17,6 +17,23 @@ ldap_ciphers = os.environ['LDAP_CIPHERS']
 faculty_attribute = os.environ.get('LDAP_FACULTY_ATTRIBUTE', 'Organisationseinheit')
 
 
+def retrieve_one_user_info(username):
+    conn = connect_anonymous()
+
+    logging.debug('Searching for user data')
+    conn.search(
+        ldap_base_dn,
+        f"(uid={username})",  # Adjust this filter based on your user identification
+        attributes=["*"]  # Retrieve all attributes for inspection
+    )
+
+    if conn.entries:
+        return conn.entries[0]  # Return the first found entry
+    else:
+        logging.error("No user found.")
+        return None
+
+
 def connect_anonymous():
     """
     Establish an unauthenticated LDAP connection.
@@ -56,4 +73,5 @@ def retrieve_faculty_info():
 
 
 if __name__ == "__main__":
+    retrieve_one_user_info("rgaritafigue")
     retrieve_faculty_info()
