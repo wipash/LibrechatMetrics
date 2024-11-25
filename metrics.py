@@ -4,73 +4,84 @@ from datetime import datetime
 # Connect to MongoDB
 client = MongoClient('mongodb://mongodb:27017/')
 db = client['LibreChat']
-users_collection = db['users']
 messages_collection = db['messages']
 
 
-# Function to count users per day
-def count_users_per_day():
-    pipeline = [
-        {
-            '$group': {
-                '_id': {
-                    'year': {'$year': '$createdAt'},
-                    'month': {'$month': '$createdAt'},
-                    'day': {'$dayOfMonth': '$createdAt'}
-                },
-                'userCount': {'$sum': 1}
-            }
-        },
-        {
-            '$sort': {'_id': 1}
-        }
-    ]
-    results = users_collection.aggregate(pipeline)
-    print("Number of users per day:")
-    for record in results:
-        date = datetime(
-            record['_id']['year'],
-            record['_id']['month'],
-            record['_id']['day']
-        ).strftime('%Y-%m-%d')
-        count = record['userCount']
-        print(f"{date}: {count} users")
-
-
-def average_users_per_day():
-    pipeline = [
-        {
-            '$group': {
-                '_id': {
-                    'year': {'$year': '$createdAt'},
-                    'month': {'$month': '$createdAt'},
-                    'day': {'$dayOfMonth': '$createdAt'}
-                },
-                'userCount': {'$sum': 1}
-            }
-        },
-        {
-            '$group': {
-                '_id': None,
-                'totalUsers': {'$sum': '$userCount'},
-                'daysCount': {'$sum': 1}
-            }
-        }
-    ]
-
-    result = users_collection.aggregate(pipeline)
-
-    for record in result:
-        average = record['totalUsers'] / record['daysCount']
-        print(f"Average users per day: {average:.2f}")
-
-
-# Function to count messages per user
-def count_messages_per_user():
+def get_unique_users_per_day():
     pipeline = [
         {
             '$match': {
-                'user': {'$exists': True, '$ne': None}  # Ensure user field exists
+                'sender': 'User'  # Only consider messages from human users
+            }
+        },
+        {
+            '$group': {
+                '_id': {
+                    'year': {'$year': '$createdAt'},
+                    'month': {'$month': '$createdAt'},
+                    'day': {'$dayOfMonth': '$createdAt'},
+                    'user': '$user'  # Group by user and date
+                }
+            }
+        },
+        {
+            '$group': {
+                '_id': {
+                    'year': '$_id.year',
+                    'month': '$_id.month',
+                    'day': '$_id.day',
+                },
+                'uniqueUsers': {'$addToSet': '$_id.user'}  # Count distinct users
+            }
+        },
+        {
+            '$project': {
+                'date': {
+                    '$dateFromParts': {
+                        'year': '$_id.year',
+                        'month': '$_id.month',
+                        'day': '$_id.day'
+                    }
+                },
+                'userCount': {'$size': '$uniqueUsers'}  # Get the count of unique users
+            }
+        },
+        {
+            '$sort': {'date': 1}  # Sort by date
+        }
+    ]
+
+    return messages_collection.aggregate(pipeline)
+
+
+def count_unique_users_per_day():
+    results = get_unique_users_per_day()
+
+    print("Number of unique users per day:")
+    for record in results:
+        date = record['date'].strftime('%Y-%m-%d')
+        count = record['userCount']
+        print(f"{date}: {count} unique users")
+
+
+def average_users_per_day():
+    results = list(get_unique_users_per_day())
+
+    if results:
+        total_users = sum(record['userCount'] for record in results)
+        day_count = len(results)
+
+        average = total_users / day_count
+        print(f"Average users per day: {average:.2f}")
+    else:
+        print("No users found.")
+
+
+def get_messages_per_user_pipeline():
+    pipeline = [
+        {
+            '$match': {
+                'sender': 'User',  # Only include messages from human users
             }
         },
         {
@@ -83,7 +94,13 @@ def count_messages_per_user():
             '$sort': {'messageCount': -1}  # Sort by message count descending
         }
     ]
-    results = messages_collection.aggregate(pipeline)
+
+    return messages_collection.aggregate(pipeline)
+
+
+def count_messages_per_user():
+    results = get_messages_per_user_pipeline()
+
     print("Number of messages per user:")
     for record in results:
         user_id = str(record['_id'])  # Convert ObjectId or ID to string
@@ -94,6 +111,11 @@ def count_messages_per_user():
 def average_messages_per_user():
     pipeline = [
         {
+            '$match': {
+                'sender': 'User',  # Filter for messages from human users
+            }
+        },
+        {
             '$group': {
                 '_id': '$user',
                 'messageCount': {'$sum': 1}
@@ -103,7 +125,7 @@ def average_messages_per_user():
             '$group': {
                 '_id': None,
                 'totalMessages': {'$sum': '$messageCount'},
-                'userCount': {'$sum': 1}  # Counting the number of unique users
+                'userCount': {'$sum': 1}  # Count unique users
             }
         }
     ]
@@ -124,7 +146,8 @@ if __name__ == "__main__":
 
     with open(log_file_path, 'a') as f:
         f.write(f'[{current_date}] Running metrics...\n')
-    count_users_per_day()
+
+    count_unique_users_per_day()
     print()
     average_users_per_day()
     print()
