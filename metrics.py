@@ -12,8 +12,8 @@ client = MongoClient('mongodb://mongodb:27017/')
 db = client['LibreChat']
 messages_collection = db['messages']
 
-# Define Prometheus metrics
-unique_users_per_day_gauge = Gauge('librechat_unique_users_per_day', 'Unique users per day')
+# Define Prometheus metrics with date labels
+unique_users_per_day_gauge = Gauge('librechat_unique_users_per_day', 'Unique users per day', ['date'])
 average_users_per_day_gauge = Gauge('librechat_average_users_per_day', 'Average users per day')
 stddev_users_per_day_gauge = Gauge('librechat_stddev_users_per_day', 'Standard deviation of users per day')
 average_messages_per_user_gauge = Gauge('librechat_average_messages_per_user', 'Average messages per user')
@@ -30,21 +30,19 @@ def get_unique_users_per_day():
         {
             '$group': {
                 '_id': {
-                    'date': {
-                        '$dateToString': {'format': '%Y-%m-%d', 'date': '$createdAt'}
-                    },
-                    'user': '$user'
-                }
+                    '$dateToString': {'format': '%Y-%m-%d', 'date': '$createdAt'}
+                },
+                'users': {'$addToSet': '$user'}
             }
         },
         {
-            '$group': {
-                '_id': '$_id.date',
-                'uniqueUsers': {'$sum': 1}
+            '$project': {
+                'date': '$_id',
+                'uniqueUserCount': {'$size': '$users'}
             }
         },
         {
-            '$sort': {'_id': 1}
+            '$sort': {'date': 1}
         }
     ]
     return list(messages_collection.aggregate(pipeline))
@@ -52,19 +50,29 @@ def get_unique_users_per_day():
 
 def collect_unique_users_per_day():
     results = get_unique_users_per_day()
-    total_users = sum(record['uniqueUsers'] for record in results)
-    day_count = len(results)
+
+    # Clear existing metrics to avoid duplication
+    unique_users_per_day_gauge.clear()
+
+    user_counts = []
+    for record in results:
+        date = record['date']
+        unique_user_count = record['uniqueUserCount']
+        unique_users_per_day_gauge.labels(date=date).set(unique_user_count)
+        user_counts.append(unique_user_count)
+
+    # Calculate average and standard deviation
+    total_users = sum(user_counts)
+    day_count = len(user_counts)
 
     if day_count > 0:
         average_users = total_users / day_count
-        variance = sum((record['uniqueUsers'] - average_users) ** 2 for record in results) / day_count
+        variance = sum((count - average_users) ** 2 for count in user_counts) / day_count
         stddev_users = variance ** 0.5
 
-        unique_users_per_day_gauge.set(total_users)
         average_users_per_day_gauge.set(average_users)
         stddev_users_per_day_gauge.set(stddev_users)
     else:
-        unique_users_per_day_gauge.set(0)
         average_users_per_day_gauge.set(0)
         stddev_users_per_day_gauge.set(0)
 
@@ -87,9 +95,10 @@ def collect_average_and_stddev_messages_per_user():
     total_users = len(results)
 
     if total_users > 0:
-        total_messages = sum(user['messageCount'] for user in results)
+        message_counts = [user['messageCount'] for user in results]
+        total_messages = sum(message_counts)
         average_messages = total_messages / total_users
-        variance = sum((user['messageCount'] - average_messages) ** 2 for user in results) / total_users
+        variance = sum((count - average_messages) ** 2 for count in message_counts) / total_users
         stddev_messages = variance ** 0.5
 
         average_messages_per_user_gauge.set(average_messages)
