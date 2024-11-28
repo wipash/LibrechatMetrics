@@ -1,0 +1,15 @@
+port:
+  tcp:8000:
+    listening: true
+    ip:
+      - 0.0.0.0
+
+http:
+  http://localhost:8000:
+    status: 200
+    body:
+      - librechat_average_users_per_day
+
+process:
+  python:
+    running: true
