@@ -3,10 +3,7 @@ from prometheus_client import start_http_server, Gauge
 import time
 import logging
 import os
-from dotenv import load_dotenv
 
-# Load environment variables from .env.example file
-load_dotenv()
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
