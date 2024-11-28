@@ -18,6 +18,128 @@ average_users_per_day_gauge = Gauge('librechat_average_users_per_day', 'Average 
 stddev_users_per_day_gauge = Gauge('librechat_stddev_users_per_day', 'Standard deviation of users per day')
 average_messages_per_user_gauge = Gauge('librechat_average_messages_per_user', 'Average messages per user')
 stddev_messages_per_user_gauge = Gauge('librechat_stddev_messages_per_user', 'Standard deviation of messages per user')
+# Define the gauge with 'model' and 'date' labels
+messages_per_model_per_day_gauge = Gauge(
+    'librechat_messages_per_model_per_day',
+    'Messages per model per day',
+    ['model', 'date']
+)
+average_messages_per_model_per_day_gauge = Gauge(
+    'librechat_average_messages_per_model_per_day',
+    'Average messages per model per day',
+    ['model']
+)
+stddev_messages_per_model_per_day_gauge = Gauge(
+    'librechat_stddev_messages_per_model_per_day',
+    'Standard deviation of messages per model per day',
+    ['model']
+)
+
+
+def get_model_daily_message_stats():
+    pipeline = [
+        {
+            '$match': {
+                'sender': {'$ne': 'User'}
+            }
+        },
+        {
+            '$group': {
+                '_id': {
+                    'model': '$model',
+                    'date': {
+                        '$dateToString': {
+                            'format': '%Y-%m-%d',
+                            'date': '$createdAt'
+                        }
+                    }
+                },
+                'dailyMessageCount': {'$sum': 1}
+            }
+        },
+        {
+            '$group': {
+                '_id': '$_id.model',
+                'dailyCounts': {'$push': '$dailyMessageCount'},
+                'totalMessages': {'$sum': '$dailyMessageCount'},
+                'dayCount': {'$sum': 1}
+            }
+        }
+    ]
+    return list(messages_collection.aggregate(pipeline))
+
+
+def collect_average_and_stddev_messages_per_model_per_day():
+    results = get_model_daily_message_stats()
+
+    # Clear existing metrics to avoid duplication
+    average_messages_per_model_per_day_gauge.clear()
+    stddev_messages_per_model_per_day_gauge.clear()
+
+    for record in results:
+        model = record['_id'] if record['_id'] else 'Unknown'
+        daily_counts = record['dailyCounts']
+        day_count = record['dayCount']
+        total_messages = record['totalMessages']
+
+        if day_count > 0:
+            # Calculate average
+            average_messages = total_messages / day_count
+
+            # Calculate standard deviation
+            variance = sum((count - average_messages) ** 2 for count in daily_counts) / day_count
+            stddev_messages = variance ** 0.5
+
+            # Set metrics
+            average_messages_per_model_per_day_gauge.labels(model=model).set(average_messages)
+            stddev_messages_per_model_per_day_gauge.labels(model=model).set(stddev_messages)
+        else:
+            average_messages_per_model_per_day_gauge.labels(model=model).set(0)
+            stddev_messages_per_model_per_day_gauge.labels(model=model).set(0)
+
+
+def get_messages_per_model_per_day():
+    pipeline = [
+        {
+            '$match': {
+                'sender': {'$ne': 'User'}  # Include messages not from 'User'
+            }
+        },
+        {
+            '$group': {
+                '_id': {
+                    'model': '$model',
+                    'date': {
+                        '$dateToString': {
+                            'format': '%Y-%m-%d',
+                            'date': '$createdAt'
+                        }
+                    }
+                },
+                'messageCount': {'$sum': 1}
+            }
+        },
+        {
+            '$sort': {
+                '_id.date': 1,
+                '_id.model': 1
+            }
+        }
+    ]
+    return list(messages_collection.aggregate(pipeline))
+
+
+def collect_messages_per_model_per_day():
+    results = get_messages_per_model_per_day()
+
+    # Clear existing metrics to avoid duplication
+    messages_per_model_per_day_gauge.clear()
+
+    for record in results:
+        model = record['_id']['model'] if record['_id']['model'] else 'Unknown'
+        date = record['_id']['date']
+        count = record['messageCount']
+        messages_per_model_per_day_gauge.labels(model=model, date=date).set(count)
 
 
 def get_unique_users_per_day():
@@ -112,6 +234,8 @@ def collect_metrics():
     try:
         collect_unique_users_per_day()
         collect_average_and_stddev_messages_per_user()
+        collect_messages_per_model_per_day()
+        collect_average_and_stddev_messages_per_model_per_day()
         logger.info("Metrics collected successfully.")
     except Exception as e:
         logger.error(f"Error collecting metrics: {e}")
