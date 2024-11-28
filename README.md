@@ -1,6 +1,6 @@
 # LibreChat Metrics
 
-This script is designed to collect and expose various metrics from the LibreChat application for monitoring and analysis using Prometheus.
+This script is designed to collect and expose various metrics from the [LibreChat](https://www.librechat.ai/) application for monitoring and analysis using Prometheus.
 
 ## Overview
 
@@ -54,24 +54,24 @@ PROMETHEUS_PORT=8000
 Start the metrics collection script:
 
 ```python metrics.py```
-The script will start an HTTP server on port 8000 to expose the metrics.
+The script will start an HTTP server to expose the metrics.
 ### 5. Configure Prometheus
 
 Add the following job to your Prometheus configuration file (prometheus.yml):scrape_configs:
-```
-  - job_name: 'librechat_metrics'
-    scrape_interval: 60s
-    static_configs:
-      - targets: ['localhost:8000']  # Update if the script runs on a different host or port
+```yaml
+- job_name: 'librechat_metrics'
+  scrape_interval: 60s
+  static_configs:
+    - targets: ['localhost:8000']  # Update if the script runs on a different host or port
 ```
 Reload Prometheus to apply the new configuration.
 
 
-## Docker Deployment (Optional)
+## Docker Deployment
 
 A Dockerfile is included for containerized deployment.
 
-If you want to run the script inside the mongodb librechat container, you can add something like this to the docker compose:
+If you want to run the script inside the mongodb librechat container, you can add something like this to the librechat docker compose:
 
 ```yaml
 metrics:
