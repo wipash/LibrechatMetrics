@@ -14,7 +14,7 @@ The script connects to the MongoDB database used by LibreChat, aggregates releva
   - **Average and standard deviation of messages per user**
   - **Messages per model per day**
   - **Average and standard deviation of messages per model per day**
-- Exposes metrics on port `8000` for Prometheus to scrape
+- Exposes metrics for Prometheus to scrape
 - Designed to run continuously, collecting metrics at regular intervals
 
 ## Prerequisites
