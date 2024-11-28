@@ -89,3 +89,7 @@ metrics:
 ```
 
 Make sure the networks attribute is the same as your mongodb container.
+
+## Authors
+
+virtUOS
