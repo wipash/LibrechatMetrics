@@ -253,7 +253,7 @@ def collect_metrics():
 if __name__ == "__main__":
     # Start up the server to expose the metrics.
     start_http_server(prometheus_port)  # Use port from environment variable
-    logger.info("Metrics server is running on port 8000.")
+    logger.info(f"Metrics server is running on port {str(prometheus_port)}.")
     # Collect metrics at regular intervals
     while True:
         collect_metrics()
