@@ -71,7 +71,7 @@ Reload Prometheus to apply the new configuration.
 
 A Dockerfile is included for containerized deployment.
 
-If you want to run the script inside the mongodb librechat container, you can add something like this to the docker compose file:
+If you want to run the script inside the mongodb librechat container, you can add something like this to the docker compose:
 
 ```yaml
 metrics:
@@ -84,6 +84,8 @@ metrics:
   ports:
     - "8000:8000"  # Expose port for Prometheus
   restart: unless-stopped
+  volumes:
+    - ./metrics/.env:/app/.env  # Mount the .env file
 ```
 
 Make sure the networks attribute is the same as your mongodb container.

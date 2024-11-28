@@ -13,7 +13,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Get MongoDB URI from environment variable
-mongodb_uri = os.getenv('MONGODB_URI', 'mongodb://localhost:27017/')
+mongodb_uri = os.getenv('MONGODB_URI', 'mongodb://mongodb:27017/')
 prometheus_port = int(os.getenv('PROMETHEUS_PORT', '8000'))
 
 # Connect to MongoDB
