@@ -2,13 +2,22 @@ from pymongo import MongoClient
 from prometheus_client import start_http_server, Gauge
 import time
 import logging
+import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env.example file
+load_dotenv()
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Get MongoDB URI from environment variable
+mongodb_uri = os.getenv('MONGODB_URI', 'mongodb://localhost:27017/')
+prometheus_port = int(os.getenv('PROMETHEUS_PORT', '8000'))
+
 # Connect to MongoDB
-client = MongoClient('mongodb://mongodb:27017/')
+client = MongoClient(mongodb_uri)
 db = client['LibreChat']
 messages_collection = db['messages']
 
@@ -243,7 +252,7 @@ def collect_metrics():
 
 if __name__ == "__main__":
     # Start up the server to expose the metrics.
-    start_http_server(8000)  # Expose on port 8000
+    start_http_server(prometheus_port)  # Use port from environment variable
     logger.info("Metrics server is running on port 8000.")
     # Collect metrics at regular intervals
     while True:
