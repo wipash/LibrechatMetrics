@@ -1,3 +1,2 @@
 pymongo
 prometheus-client
-python-dotenv
